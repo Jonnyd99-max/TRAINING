@@ -152,17 +152,23 @@ def render_scene(scene, folder, scratch, index):
     filters = [f for f in [visuals.motion_filter(scene)] if f]
     fades = f'fade=t=in:st=0:d={fade},fade=t=out:st={duration-fade}:d={fade}'
     subtitle_cues = cues(scene)
-    if scene['caption'].strip() or subtitle_cues:
+    subtitle_mode = scene.get('subtitles_enabled') and scene.get('audio_duration')
+    if scene['caption'].strip() or subtitle_mode:
         caption = scratch / f'{index}-caption.png'
-        if subtitle_cues:
+        if subtitle_mode:
             # A single timed image stream avoids one FFmpeg input per phrase.
             entries = []
+            caption_layer({'caption': ''}).save(caption)
+            position = 0
             for n, cue in enumerate(subtitle_cues):
+                if cue['start'] > position:
+                    entries += [f"file '{caption.name}'", 'option framerate 25', f"duration {cue['start']-position:.9f}"]
                 layer = scratch / f'{index}-subtitle-{n}.png'
                 caption_layer({'caption': cue['text']}).save(layer)
                 entries += [f"file '{layer.name}'", 'option framerate 25', f"duration {cue['end']-cue['start']:.9f}"]
+                position = cue['end']
             caption_layer({'caption': ''}).save(caption)
-            remaining = max(0, duration - subtitle_cues[-1]['end'])
+            remaining = max(0, duration - position)
             entries += [f"file '{caption.name}'", 'option framerate 25', f'duration {remaining + .08:.9f}', f"file '{caption.name}'"]
             manifest = scratch / f'{index}-subtitles.txt'
             manifest.write_text('\n'.join(entries)+'\n', encoding='utf-8')

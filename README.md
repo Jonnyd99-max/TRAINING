@@ -121,6 +121,8 @@ Blur softens details; use a solid **Cover** when text must be unreadable in the 
 
 ### Narration subtitles
 
+**Timing controls:** after generating narration, open **Subtitle timing**. Drag the scene playhead to seek, or play and pause at a word. Use **Start here** / **End here**, or type start/end seconds for each phrase. **Go to start** positions playback at that phrase. Edit phrase text, add/remove phrases, then click **Apply subtitle timing** before previewing or exporting. Applied timings autosave with the scene. **Reset to estimated** restores automatic timing. Gaps are allowed; overlapping phrases are rejected. Changing narration, voice or speed resets custom timings. Shortening a scene clips its subtitle display without deleting the saved timings.
+
 Select **Show narration subtitles** below the narration text, then generate narration and press **Play**. Short phrases follow the audio in the preview and are burned into the exported MP4, including title scenes. Newly added screenshot scenes enable subtitles by default; existing scenes keep their previous appearance until enabled. Subtitles replace the static caption area, but do not delete your caption text. They disappear after the narration ends and are clipped if you shorten a scene.
 
 Timing is estimated proportionally from phrase length and the generated audio duration, not speech-aligned word timestamps. Review playback for unusual pauses, abbreviations or numbers. This feature works with both offline and online voices without another service or model download. Editing narration, voice or speed requires regenerating audio before subtitle preview; export does this automatically.

@@ -4,6 +4,8 @@ Verified on 8 September 2026 in a Windows development environment.
 
 ## Narration subtitles
 
+- Custom timing update: real MP4 frame checks passed for leading, internal and trailing gaps, and both timed phrases. API tests passed for save/reopen persistence, overlap rejection, invalid intervals and resetting custom timings after narration changes. Frontend compiled successfully with esbuild.
+
 - Generated real offline narration and a subtitle MP4, then decoded the complete video successfully.
 - Extracted frames verified that subtitle phrases change and disappear during the silent tail.
 - Checked disabled subtitles, missing audio, empty narration and clipping to a shorter scene duration.

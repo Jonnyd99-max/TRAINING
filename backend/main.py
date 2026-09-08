@@ -17,7 +17,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from .subtitles import SubtitleCue
 
 from . import media
 from . import offline_tts
@@ -46,6 +47,7 @@ class Scene(BaseModel):
     narration: str = Field(default='', max_length=10000)
     caption: str = Field(default='', max_length=220)
     subtitles_enabled: bool = False
+    subtitle_cues: list[SubtitleCue] | None = Field(default=None, max_length=1000)
     image: str | None = None
     audio: str | None = None
     audio_key: str | None = None
@@ -56,6 +58,15 @@ class Scene(BaseModel):
     speed: int = Field(default=0, ge=-50, le=100)
     annotations: list[Annotation] = Field(default_factory=list, max_length=40)
     camera: CameraMotion = Field(default_factory=CameraMotion)
+
+    @model_validator(mode='after')
+    def validate_subtitle_order(self):
+        previous = 0
+        for cue in self.subtitle_cues or []:
+            if cue.start < previous:
+                raise ValueError('Subtitles must be in order and cannot overlap.')
+            previous = cue.end
+        return self
 
 class ProjectInput(BaseModel):
     title: str = Field(min_length=1, max_length=120)
@@ -207,6 +218,8 @@ def save_project(pid: str, data: ProjectEdit):
                     raise HTTPException(400, 'A scene media file is missing. Upload the image or regenerate narration.')
             # Only preserve server-generated narration metadata; edits invalidate it.
             old = existing.get(scene['id'])
+            if old and media.signature(old) != media.signature(scene):
+                scene['subtitle_cues'] = None
             if old and old.get('audio_key') == media.signature(scene):
                 for key in ['audio', 'audio_key', 'audio_duration']:
                     scene[key] = old.get(key)
