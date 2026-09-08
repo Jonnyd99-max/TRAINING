@@ -1,6 +1,6 @@
 """Integration smoke test. Run with: python -m backend.test_workflow
 
-Uses isolated project storage; performs real TTS if reachable and a real export.
+Uses isolated project storage; tests offline TTS by default, --online for Edge.
 Install httpx as a test-only dependency. Requires FFmpeg on PATH/FFMPEG_PATH.
 """
 import io
@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import time
+import sys
 from uuid import uuid4
 
 TEST_ROOT = Path(__file__).resolve().parent.parent / 'test-results' / uuid4().hex
@@ -24,6 +25,9 @@ def main():
             assert response.status_code == 200, response.text
             return response.json()
         health = ok(client.get('/api/health'))
+        online = '--online' in sys.argv
+        engine = 'edge_tts' if online else 'offline_tts'
+        voice = 'en-GB-SoniaNeural' if online else health['default_voice']
         results['ffmpeg'] = health['ffmpeg']
         assert len(ok(client.get('/api/projects'))[0]['scenes']) == 3
         p = ok(client.post('/api/projects', json={'title': 'Workflow verification', 'subtitle': 'A real export', 'opening': True}))
@@ -32,7 +36,7 @@ def main():
         Image.new('RGB', (1000, 650), '#72bda7').save(raw, format='PNG')
         upload = ok(client.post(f'/api/projects/{pid}/images', files={'file': ('screen.png', raw.getvalue(), 'image/png')}))
         assert client.post(f'/api/projects/{pid}/images', files={'file': ('bad.txt', b'not an image')}).status_code == 400
-        p['scenes'] += [Scene(title='First step', image=upload['image'], narration='Welcome to training.', caption="Review the highest priority lots first.").model_dump(),
+        p['scenes'] += [Scene(title='First step', image=upload['image'], voice=voice, narration='Welcome to training.', caption="Review the highest priority lots first.").model_dump(),
                         Scene(title='Second step', image=upload['image'], duration=2, manual_duration=True).model_dump()]
         p = ok(client.put(f'/api/projects/{pid}', json=p))
         assert client.put(f'/api/projects/{pid}', json={**p, 'revision': 0}).status_code == 409
@@ -50,9 +54,11 @@ def main():
                 assert s['audio_duration'] > 0
                 assert abs(s['duration'] - s['audio_duration'] - 1) < .02
                 assert len(client.get(f'/api/projects/{pid}/media/{s["audio"]}').content) > 100
-                results['edge_tts'] = 'passed: real remote synthesis, audio playback bytes and automatic duration'
+                results[engine] = 'passed: real synthesis, audio playback bytes and automatic duration'
             else:
-                results['edge_tts'] = f'unavailable: {tts.text}'
+                if not online and health['offline_ready']:
+                    raise AssertionError(tts.text)
+                results[engine] = f'unavailable: {tts.text}'
                 # Test FFmpeg audio integration separately with a known generated tone.
                 audio = TEST_ROOT / pid / 'audio' / 'test-tone.mp3'
                 media.run([media.ffmpeg(), '-y', '-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', str(audio)])

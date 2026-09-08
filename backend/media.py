@@ -6,10 +6,10 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import textwrap
 
 import edge_tts
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+from . import offline_tts
 
 VOICES = {
     'en-GB-SoniaNeural': 'Sonia · British female',
@@ -38,7 +38,22 @@ def audio_duration(path):
     return len(result.stdout) / 32000
 
 def signature(scene):
-    return hashlib.sha256(json.dumps([scene['narration'], scene['voice'], scene['speed']]).encode()).hexdigest()[:24]
+    values = [scene['narration'], scene['voice'], scene['speed']]
+    if offline_tts.is_offline(scene['voice']):
+        values.append('piper-v1')
+    return hashlib.sha256(json.dumps(values).encode()).hexdigest()[:24]
+
+def offline_audio(scene, temporary):
+    wave = temporary.with_suffix('.wav')
+    try:
+        offline_tts.synthesize(scene['narration'], scene['voice'], wave)
+        # atempo preserves pitch and gives the percentage slider the same
+        # meaning across engines.
+        run([ffmpeg(), '-y', '-v', 'error', '-i', str(wave),
+             '-af', f"atempo={1 + scene['speed']/100}", '-c:a', 'libmp3lame',
+             '-b:a', '128k', str(temporary)])
+    finally:
+        wave.unlink(missing_ok=True)
 
 async def narrate(scene, folder):
     if not ffmpeg():
@@ -51,12 +66,20 @@ async def narrate(scene, folder):
     if not path.exists():
         temporary = path.with_suffix('.tmp.mp3')
         try:
-            await asyncio.wait_for(edge_tts.Communicate(scene['narration'], scene['voice'],
-                                      rate=f"{scene['speed']:+d}%").save(str(temporary)), timeout=90)
+            if offline_tts.is_offline(scene['voice']):
+                await asyncio.to_thread(offline_audio, scene, temporary)
+            else:
+                if scene['voice'] not in VOICES:
+                    raise ValueError('Choose an available narration voice.')
+                await asyncio.wait_for(edge_tts.Communicate(scene['narration'], scene['voice'],
+                                          rate=f"{scene['speed']:+d}%").save(str(temporary)), timeout=90)
+            # Validate audio before publishing its cache entry.
+            if await asyncio.to_thread(audio_duration, temporary) <= 0:
+                raise ValueError('Narration audio is empty. Please regenerate it.')
             temporary.replace(path)
         finally:
             temporary.unlink(missing_ok=True)
-    duration = audio_duration(path)
+    duration = await asyncio.to_thread(audio_duration, path)
     scene.update(audio=relative, audio_key=key, audio_duration=duration)
     if not scene['manual_duration']:
         scene['duration'] = round(duration + 1, 2)

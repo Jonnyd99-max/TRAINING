@@ -2,7 +2,18 @@
 
 Verified on 8 September 2026 in a Windows development environment.
 
-## Passed
+## Offline narration update
+
+- Downloaded both pinned Piper voice models and verified their SHA-256 checksums.
+- Generated real speech with Northern English male and Jenny (Dioco), including punctuation/Unicode text.
+- Blocked external Python socket connections, HTTP session creation, and Edge TTS during the dedicated test; local loopback was allowed for Windows asyncio internals.
+- Verified audio caching, invalidation on voice/speed changes, +100% speed, narration + 1 second automatic duration, and manual duration preservation.
+- Exported and fully decoded a real MP4 whose narration was generated in the background export job using Piper.
+- Confirmed missing model/engine/voice errors remain friendly and never invoke an online fallback.
+- React DOM testing against the running HTTP API also passed: switching an existing online project to offline voices, autosaving, generating real Piper narration, and reaching VIDEO READY. Browser audio playback was stubbed; this is not a visual browser test.
+- Offline model setup is separate from runtime. `setup-offline.bat` provisions the normal `.venv`; the full double-click setup/launcher remains subject to the environment limitation below.
+
+## Original MVP checks
 
 - FastAPI server started successfully on loopback.
 - Frontend HTML, JavaScript, CSS, health and project endpoints returned HTTP 200.

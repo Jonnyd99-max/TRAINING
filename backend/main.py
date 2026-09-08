@@ -20,6 +20,7 @@ from PIL import Image, ImageDraw, ImageOps, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
 from . import media
+from . import offline_tts
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = Path(os.environ.get('JD_PROJECTS_DIR', ROOT / 'projects')).resolve()
@@ -48,7 +49,7 @@ class Scene(BaseModel):
     audio_duration: float | None = None
     duration: float = Field(default=5, ge=1, le=3600)
     manual_duration: bool = False
-    voice: str = 'en-GB-SoniaNeural'
+    voice: str = Field(default_factory=offline_tts.default_voice, min_length=1, max_length=200)
     speed: int = Field(default=0, ge=-50, le=100)
 
 class ProjectInput(BaseModel):
@@ -150,7 +151,11 @@ def health():
             ready = True
         except (OSError, RuntimeError):
             pass
-    return dict(ffmpeg=ready, voices=media.VOICES,
+    offline = offline_tts.refresh()
+    return dict(ffmpeg=ready, voices={**offline['voices'], **media.VOICES},
+                offline_voices=offline['voices'], online_voices=media.VOICES,
+                offline_ready=offline['ready'], default_voice=offline['default_voice'],
+                offline_message=offline['message'], offline_instructions=offline_tts.INSTRUCTIONS,
                 instructions='Install FFmpeg (including ffmpeg.exe), add its bin folder to PATH, then restart. On Windows: winget install Gyan.FFmpeg')
 
 @app.get('/api/projects')
@@ -186,7 +191,7 @@ def save_project(pid: str, data: ProjectEdit):
         if len({s['id'] for s in scenes}) != len(scenes):
             raise HTTPException(400, 'Each scene must have a unique identifier.')
         for scene in scenes:
-            if scene['voice'] not in media.VOICES:
+            if scene['voice'] not in media.VOICES and not offline_tts.is_offline(scene['voice']):
                 raise HTTPException(400, 'Choose one of the available narration voices.')
             for key in ['image', 'audio']:
                 value = scene[key]
@@ -253,6 +258,8 @@ async def narration(pid: str, sid: str):
         raise HTTPException(400, str(e))
     except Exception:
         log.exception('Narration failed')
+        if offline_tts.is_offline(scene['voice']):
+            raise HTTPException(500, 'Offline narration failed. Check the selected Piper voice and FFmpeg, then retry. Details are in logs/studio.log.')
         raise HTTPException(502, 'Narration could not be generated. Check your internet connection and retry; the free Edge TTS service may be unavailable.')
     finally:
         with lock:
@@ -288,9 +295,12 @@ def render_job(jobid, project):
             project.update(video=output, revision=project['revision']+1)
             write(project)
         job.update(status='complete', progress=100, message='VIDEO READY', video=output)
-    except Exception as e:
+    except ValueError as e:
+        log.exception('Video narration failed')
+        job.update(status='failed', message=str(e))
+    except Exception:
         log.exception('Video generation failed')
-        job.update(status='failed', message='Video generation failed. Check FFmpeg and your internet connection, then retry. Technical details are in logs/studio.log.')
+        job.update(status='failed', message='Video generation failed. Check FFmpeg, available disk space and your narration voice. Online voices also require internet. Technical details are in logs/studio.log.')
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
         with lock:
