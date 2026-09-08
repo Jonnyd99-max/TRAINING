@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from . import media
 from . import offline_tts
 from . import exports
+from .visuals import Annotation, CameraMotion
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = Path(os.environ.get('JD_PROJECTS_DIR', ROOT / 'projects')).resolve()
@@ -52,6 +53,8 @@ class Scene(BaseModel):
     manual_duration: bool = False
     voice: str = Field(default_factory=offline_tts.default_voice, min_length=1, max_length=200)
     speed: int = Field(default=0, ge=-50, le=100)
+    annotations: list[Annotation] = Field(default_factory=list, max_length=40)
+    camera: CameraMotion = Field(default_factory=CameraMotion)
 
 class ProjectInput(BaseModel):
     title: str = Field(min_length=1, max_length=120)
@@ -192,6 +195,8 @@ def save_project(pid: str, data: ProjectEdit):
         if len({s['id'] for s in scenes}) != len(scenes):
             raise HTTPException(400, 'Each scene must have a unique identifier.')
         for scene in scenes:
+            if len({a['id'] for a in scene['annotations']}) != len(scene['annotations']):
+                raise HTTPException(400, 'Each annotation must have a unique identifier within its scene.')
             if scene['voice'] not in media.VOICES and not offline_tts.is_offline(scene['voice']):
                 raise HTTPException(400, 'Choose one of the available narration voices.')
             for key in ['image', 'audio']:

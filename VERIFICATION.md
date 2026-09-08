@@ -2,6 +2,15 @@
 
 Verified on 8 September 2026 in a Windows development environment.
 
+## Screenshot annotations and zoom/pan update
+
+- Tested all five drawing tools in the real browser: arrows, highlights, numbered steps, blur and solid covers, including resizing and save/reopen persistence.
+- Tested camera start/end framing, zoom, dragging to pan, playback and pause. Pausing preserves the current camera frame until editing resumes.
+- Rendered and fully decoded a real MP4. Pixel checks verified annotations, blur, solid covers, camera movement and captions remaining fixed while the screenshot moves.
+- Verified invalid coordinates/zoom are rejected and older scenes default to no annotations or camera movement.
+- Re-ran the offline narration and full workflow suites after the rendering changes; real speech, captioned 1080p H.264/AAC exports and full decoding passed.
+- Repeat the isolated export checks with `python -m backend.test_visuals`.
+
 ## Offline narration update
 
 - Downloaded both pinned Piper voice models and verified their SHA-256 checksums.
@@ -29,7 +38,7 @@ Verified on 8 September 2026 in a Windows development environment.
 
 - FFmpeg was not installed on the system PATH. Tests used a downloaded FFmpeg 7.1 binary via `FFMPEG_PATH`. Install FFmpeg normally before using the launcher.
 - This environment's bundled Node runtime returns `spawn EPERM` when Vite starts its build subprocesses. The source was compiled with esbuild directly for HTTP and React DOM testing. The standard `npm run build` and the complete double-click launcher still need verification in a normal Windows terminal.
-- The automated browser returned `ERR_BLOCKED_BY_CLIENT` for localhost. No visual browser interaction, audible playback, or Windows Explorer launch was personally verified. DOM Play/Pause tests stubbed media playback; they verify state changes, not sound.
+- During the initial MVP checks the automated browser returned `ERR_BLOCKED_BY_CLIENT` for localhost. Browser access subsequently worked for the annotation/zoom update described above. Audible playback and Windows Explorer launch remain unverified. Initial DOM Play/Pause tests stubbed media playback.
 - There is no paid API dependency. Edge TTS worked during these tests but still requires internet access and service availability.
 
 Run `python -m backend.test_workflow` after installing the documented test dependency to repeat the integration checks. Generated test data is isolated under `test-results/` and excluded from Git.

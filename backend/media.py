@@ -10,6 +10,7 @@ import subprocess
 import edge_tts
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from . import offline_tts
+from . import visuals
 
 VOICES = {
     'en-GB-SoniaNeural': 'Sonia · British female',
@@ -104,7 +105,18 @@ def lines(text, typeface, width):
         result.append(line.rstrip())
     return result
 
-def frame(scene, folder):
+def caption_layer(scene):
+    overlay = Image.new('RGBA', (1920, 1080))
+    if scene['caption'].strip():
+        caption_lines = lines(scene['caption'], font(36), 1680)
+        height = len(caption_lines)*48 + 36
+        od = ImageDraw.Draw(overlay)
+        od.rounded_rectangle((80, 1010-height, 1840, 1010), 16, fill=(12, 20, 32, 230))
+        for index, line in enumerate(caption_lines):
+            od.text((960, 1028-height+index*48), line, font=font(36), fill='white', anchor='mt')
+    return overlay
+
+def frame(scene, folder, include_caption=True):
     canvas = Image.new('RGB', (1920, 1080), '#101928')
     draw = ImageDraw.Draw(canvas)
     if scene['kind'] == 'title':
@@ -120,22 +132,15 @@ def frame(scene, folder):
         with Image.open(folder / scene['image']) as original:
             fitted = ImageOps.contain(ImageOps.exif_transpose(original).convert('RGB'), (1920, 1080))
             canvas.paste(fitted, ((1920-fitted.width)//2, (1080-fitted.height)//2))
-        draw = ImageDraw.Draw(canvas)
-    if scene['caption'].strip():
-        caption_lines = lines(scene['caption'], font(36), 1680)
-        height = len(caption_lines)*48 + 36
-        overlay = Image.new('RGBA', canvas.size)
-        od = ImageDraw.Draw(overlay)
-        od.rounded_rectangle((80, 1010-height, 1840, 1010), 16, fill=(12, 20, 32, 230))
-        for index, line in enumerate(caption_lines):
-            od.text((960, 1028-height+index*48), line, font=font(36), fill='white', anchor='mt')
-        canvas = Image.alpha_composite(canvas.convert('RGBA'), overlay).convert('RGB')
+        canvas = visuals.annotate(canvas, scene.get('annotations', []), font)
+    if include_caption and scene['caption'].strip():
+        canvas = Image.alpha_composite(canvas.convert('RGBA'), caption_layer(scene)).convert('RGB')
     return canvas
 
 def render_scene(scene, folder, scratch, index):
     still = scratch / f'{index}.png'
     segment = scratch / f'{index}.mp4'
-    frame(scene, folder).save(still)
+    frame(scene, folder, include_caption=False).save(still)
     duration = scene['duration']
     fade = min(.3, duration/3)
     args = [ffmpeg(), '-y', '-v', 'error', '-loop', '1', '-framerate', '25', '-i', str(still)]
@@ -143,7 +148,18 @@ def render_scene(scene, folder, scratch, index):
         args += ['-i', str(folder / scene['audio'])]
     else:
         args += ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']
-    args += ['-t', str(duration), '-vf', f'fade=t=in:st=0:d={fade},fade=t=out:st={duration-fade}:d={fade}',
+    filters = [f for f in [visuals.motion_filter(scene)] if f]
+    fades = f'fade=t=in:st=0:d={fade},fade=t=out:st={duration-fade}:d={fade}'
+    if scene['caption'].strip():
+        caption = scratch / f'{index}-caption.png'
+        caption_layer(scene).save(caption)
+        args += ['-loop', '1', '-framerate', '25', '-i', str(caption),
+                 '-filter_complex_threads', '1', '-filter_complex',
+                 f"[0:v]{','.join(filters) if filters else 'null'}[moving];[moving][2:v]overlay=shortest=1,{fades}[v]",
+                 '-map', '[v]', '-map', '1:a']
+    else:
+        args += ['-vf', ','.join(filters + [fades]), '-map', '0:v', '-map', '1:a']
+    args += ['-t', str(duration),
              '-af', f'apad,atrim=duration={duration},afade=t=out:st={duration-fade}:d={fade}',
              '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p',
              '-c:a', 'aac', '-ar', '48000', '-ac', '2', '-threads', '2', str(segment)]

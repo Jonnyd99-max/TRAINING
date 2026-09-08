@@ -106,6 +106,17 @@ For a single-server production build, run `npm run build` in `frontend`, then re
 
 The three-scene **Scheduler Training Demo** is created on first startup. Its placeholder images and narration can be replaced. Opening title scenes are independently editable after creation.
 
+## Screenshot annotations and zoom/pan
+
+Select an image scene. The controls below its preview have two tabs:
+
+- **Annotations:** choose **Arrow**, **Highlight**, **Step**, **Blur**, or **Cover**. Drag on the screenshot to draw an arrow/rectangle; click to place a numbered step. Use **Move / resize** to select and drag a shape, or drag its square handles to resize. The annotation selector also selects overlapping shapes. Change the colour or step number, or use **Delete annotation** (Delete/Backspace also works while the canvas has focus). Up to 40 annotations can be added per scene.
+- **Zoom & pan:** enable the checkbox, choose **Start view** or **End view**, and adjust zoom (1×–3×), horizontal focus and vertical focus. Drag the zoomed screenshot to pan. **Play** moves smoothly between the two views over the scene duration; identical start/end views make a static close-up. **Reset framing** restores the full screenshot.
+
+Annotations are positioned on the full screenshot and move with it during zoom/pan. Captions remain fixed at the bottom. Editing annotations uses the full view; pausing playback retains its current camera frame until you return to editing. Edits autosave and are included in MP4 exports. Existing projects default to no annotations and no camera movement.
+
+Blur softens details; use a solid **Cover** when text must be unreadable in the exported video. Original uploaded images remain in the project folder. Replacing a screenshot retains its scene's annotations, so review their positions after replacing it.
+
 ## Generate a video
 
 Every ordinary scene needs an image. Narration is optional; a scene without text plays silently. Click **GENERATE VIDEO**. The app saves edits, generates/reuses narration with each scene's selected engine, renders scenes in order, and combines them into a 1920×1080 H.264/AAC MP4. Short fades through black separate scenes. Progress appears above the editor; editing is locked during generation.
@@ -126,14 +137,18 @@ Alternatively set `JD_VIDEO_OUTPUT_DIR` to an absolute folder path. New exports 
 backend/
   main.py              API, storage, demo and background jobs
   media.py             Narration, captions, title frames and FFmpeg
+  visuals.py           Screenshot annotations and camera motion
   offline_tts.py       Local Piper inference and voice discovery
   setup_offline.py     One-time verified voice downloader
   requirements.txt
   requirements-offline.txt
   test_workflow.py     Integration smoke test
   test_offline.py      Real offline speech/export test
+  test_visuals.py      Annotation and camera export checks
 frontend/
   src/main.jsx         Dashboard and editor
+  src/VisualWorkspace.jsx  Annotation and camera editor
+  src/visuals.js       Canvas drawing and camera calculations
   src/style.css        Responsive layout
   vite.config.js
   package.json
