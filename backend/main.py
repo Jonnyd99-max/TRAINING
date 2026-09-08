@@ -45,6 +45,7 @@ class Scene(BaseModel):
     subtitle: str = Field(default='', max_length=160)
     narration: str = Field(default='', max_length=10000)
     caption: str = Field(default='', max_length=220)
+    subtitles_enabled: bool = False
     image: str | None = None
     audio: str | None = None
     audio_key: str | None = None

@@ -11,6 +11,7 @@ import edge_tts
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from . import offline_tts
 from . import visuals
+from .subtitles import cues
 
 VOICES = {
     'en-GB-SoniaNeural': 'Sonia · British female',
@@ -150,10 +151,26 @@ def render_scene(scene, folder, scratch, index):
         args += ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']
     filters = [f for f in [visuals.motion_filter(scene)] if f]
     fades = f'fade=t=in:st=0:d={fade},fade=t=out:st={duration-fade}:d={fade}'
-    if scene['caption'].strip():
+    subtitle_cues = cues(scene)
+    if scene['caption'].strip() or subtitle_cues:
         caption = scratch / f'{index}-caption.png'
-        caption_layer(scene).save(caption)
-        args += ['-loop', '1', '-framerate', '25', '-i', str(caption),
+        if subtitle_cues:
+            # A single timed image stream avoids one FFmpeg input per phrase.
+            entries = []
+            for n, cue in enumerate(subtitle_cues):
+                layer = scratch / f'{index}-subtitle-{n}.png'
+                caption_layer({'caption': cue['text']}).save(layer)
+                entries += [f"file '{layer.name}'", 'option framerate 25', f"duration {cue['end']-cue['start']:.9f}"]
+            caption_layer({'caption': ''}).save(caption)
+            remaining = max(0, duration - subtitle_cues[-1]['end'])
+            entries += [f"file '{caption.name}'", 'option framerate 25', f'duration {remaining + .08:.9f}', f"file '{caption.name}'"]
+            manifest = scratch / f'{index}-subtitles.txt'
+            manifest.write_text('\n'.join(entries)+'\n', encoding='utf-8')
+            args += ['-f', 'concat', '-safe', '0', '-i', str(manifest)]
+        else:
+            caption_layer(scene).save(caption)
+            args += ['-loop', '1', '-framerate', '25', '-i', str(caption)]
+        args += [
                  '-filter_complex_threads', '1', '-filter_complex',
                  f"[0:v]{','.join(filters) if filters else 'null'}[moving];[moving][2:v]overlay=shortest=1,{fades}[v]",
                  '-map', '[v]', '-map', '1:a']

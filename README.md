@@ -119,6 +119,12 @@ Blur softens details; use a solid **Cover** when text must be unreadable in the 
 
 ## Generate a video
 
+### Narration subtitles
+
+Select **Show narration subtitles** below the narration text, then generate narration and press **Play**. Short phrases follow the audio in the preview and are burned into the exported MP4, including title scenes. Newly added screenshot scenes enable subtitles by default; existing scenes keep their previous appearance until enabled. Subtitles replace the static caption area, but do not delete your caption text. They disappear after the narration ends and are clipped if you shorten a scene.
+
+Timing is estimated proportionally from phrase length and the generated audio duration, not speech-aligned word timestamps. Review playback for unusual pauses, abbreviations or numbers. This feature works with both offline and online voices without another service or model download. Editing narration, voice or speed requires regenerating audio before subtitle preview; export does this automatically.
+
 Every ordinary scene needs an image. Narration is optional; a scene without text plays silently. Click **GENERATE VIDEO**. The app saves edits, generates/reuses narration with each scene's selected engine, renders scenes in order, and combines them into a 1920×1080 H.264/AAC MP4. Short fades through black separate scenes. Progress appears above the editor; editing is locked during generation.
 
 At **VIDEO READY**, use **Play Video**, **Download MP4**, or **Open Video Location**. The latter opens Windows Explorer at that project's output folder; on other platforms it displays the folder path. Editing invalidates the current export link, but earlier exported files are retained.

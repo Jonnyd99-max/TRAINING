@@ -2,6 +2,14 @@
 
 Verified on 8 September 2026 in a Windows development environment.
 
+## Narration subtitles
+
+- Generated real offline narration and a subtitle MP4, then decoded the complete video successfully.
+- Extracted frames verified that subtitle phrases change and disappear during the silent tail.
+- Checked disabled subtitles, missing audio, empty narration and clipping to a shorter scene duration.
+- Subtitle timing is estimated from phrase length and audio duration, not forced alignment.
+- Repeat with `python -m backend.test_subtitles`.
+
 ## Screenshot annotations and zoom/pan update
 
 - Tested all five drawing tools in the real browser: arrows, highlights, numbered steps, blur and solid covers, including resizing and save/reopen persistence.

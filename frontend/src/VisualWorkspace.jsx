@@ -1,3 +1,4 @@
+import Subtitles from './Subtitles.jsx';
 import React, {useEffect,useMemo,useRef,useState} from 'react';
 import {W,H,defaultCamera,clamp,cameraAt,prepareVisual,drawViewport,hit} from './visuals.js';
 
@@ -88,7 +89,7 @@ export default function VisualWorkspace({scene,src,locked,playing,elapsed,onChan
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={()=>{gesture.current=null;setDraft(null);}}
         onKeyDown={e=>{if((e.key==='Delete'||e.key==='Backspace')&&selected&&!locked&&!playing){e.preventDefault();onChange({annotations:annotations.filter(a=>a.id!==selected)});setSelected(null);}}}/>
       {!image&&<div className="visualLoading">Loading screenshot…</div>}
-      {scene.caption&&<div className="caption">{scene.caption}</div>}
+      {scene.subtitles_enabled && scene.audio_duration ? <Subtitles scene={scene} elapsed={elapsed}/> : scene.caption&&<div className="caption">{scene.caption}</div>}
     </div></div>
     <fieldset className="visualtools" disabled={locked||playing} onPointerDownCapture={()=>setPreviewing(false)} onKeyDownCapture={()=>setPreviewing(false)}>
       <div className="visualtabs"><button className={mode==='annotate'?'active':''} onClick={()=>setMode('annotate')}>Annotations</button><button className={mode==='camera'?'active':''} onClick={()=>setMode('camera')}>Zoom &amp; pan</button></div>
