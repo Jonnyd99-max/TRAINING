@@ -1,0 +1,9 @@
+node_modules/
+frontend/dist/
+.venv/
+__pycache__/
+projects/
+logs/
+*.pyc
+test-results/
+
