@@ -15,6 +15,7 @@ from uuid import uuid4
 
 TEST_ROOT = Path(__file__).resolve().parent.parent / 'test-results' / ('offline-' + uuid4().hex)
 os.environ['JD_PROJECTS_DIR'] = str(TEST_ROOT)
+os.environ['JD_VIDEO_OUTPUT_DIR'] = str(TEST_ROOT / 'exports')
 from fastapi.testclient import TestClient
 from PIL import Image
 from .main import app, Scene, media, offline_tts

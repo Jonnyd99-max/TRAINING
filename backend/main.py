@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from . import media
 from . import offline_tts
+from . import exports
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = Path(os.environ.get('JD_PROJECTS_DIR', ROOT / 'projects')).resolve()
@@ -291,6 +292,9 @@ def render_job(jobid, project):
         output = f'output/training-{jobid}.mp4'
         media.run([media.ffmpeg(), '-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', str(manifest),
                    '-c', 'copy', '-movflags', '+faststart', str(directory / output)])
+        project['video'] = output
+        job.update(message='Saving video...', progress=95)
+        project['video_export'] = exports.publish(project, directory / output)
         with lock:
             project.update(video=output, revision=project['revision']+1)
             write(project)
@@ -335,9 +339,16 @@ def open_output(pid: str):
     project = read(pid)
     if not project.get('video') or not (folder(pid) / project['video']).exists():
         raise HTTPException(404, 'Generate a video first.')
+    exported = project.get('video_export') or {}
+    destination = folder(pid) / 'output'
+    if exported.get('video') == project['video']:
+        external = Path(exported['path'])
+        if not external.is_file():
+            raise HTTPException(404, 'The exported video was moved or deleted. Restore it or generate the video again.')
+        destination = external.parent
     if os.name == 'nt':
-        os.startfile(str(folder(pid) / 'output'))
-    return {'path': str(folder(pid) / 'output')}
+        os.startfile(str(destination))
+    return {'path': str(destination)}
 
 DIST = ROOT / 'frontend' / 'dist'
 if DIST.exists():

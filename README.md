@@ -114,6 +114,14 @@ At **VIDEO READY**, use **Play Video**, **Download MP4**, or **Open Video Locati
 
 ## Files and backups
 
+To also save completed MP4s in an easy-to-find folder, create `settings.local.json` in the repository root:
+
+```json
+{"video_output_dir": "C:\\Users\\YourName\\Desktop\\Training output"}
+```
+
+Alternatively set `JD_VIDEO_OUTPUT_DIR` to an absolute folder path. New exports receive a title, timestamp and unique suffix; existing files are not overwritten. **Open Video Location** opens this chosen folder for those exports. A project-local copy remains available for in-app playback and backups. This machine-specific setting is excluded from Git. Older exports keep their original locations.
+
 ```text
 backend/
   main.py              API, storage, demo and background jobs
