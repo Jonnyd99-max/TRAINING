@@ -8,7 +8,7 @@ const EMPTY=[];
 const uid=()=>crypto.randomUUID().replaceAll('-','');
 export default function VisualWorkspace({scene,src,locked,playing,elapsed,seekVersion=0,onChange,onError}) {
   const [image,setImage]=useState(null),[mode,setMode]=useState('annotate'),[tool,setTool]=useState('select');
-  const [selected,setSelected]=useState(null),[color,setColor]=useState('#facc15'),[endpoint,setEndpoint]=useState('end');
+  const [selected,setSelected]=useState(()=>scene.annotations?.[0]?.id??null),[color,setColor]=useState('#facc15'),[endpoint,setEndpoint]=useState('end');
   const [draft,setDraft]=useState(null);
   const [previewing,setPreviewing]=useState(false);
   const canvas=useRef(null),gesture=useRef(null);
@@ -102,12 +102,14 @@ export default function VisualWorkspace({scene,src,locked,playing,elapsed,seekVe
         <div className="toolrow"><button className={isPreview?'active':''} onClick={()=>setPreviewing(true)}>Preview annotation timing</button><button className={!isPreview?'active':''} onClick={()=>setPreviewing(false)}>Show all for editing</button></div>
         <p className="toolhint">{isPreview?'Showing annotations active at the playhead.':'Editing shows all annotations, including ones hidden at the current time.'} Play or scrub to check entry and exit times.</p>
         <p className="toolhint">Edit on the full screenshot. Drag to draw; click to place a step. Select a shape to move it or drag its square handles to resize.</p>
-        <div className="annotationproperties"><label>Selected annotation<select value={selected||''} onChange={e=>{setSelected(e.target.value||null);setTool('select');}}><option value="">None selected</option>{annotations.map((a,i)=><option key={a.id} value={a.id}>{i+1}. {a.type==='number'?`Step ${a.number}`:a.type}</option>)}</select></label>
+        <h3>Annotation timing &amp; appearance</h3>
+        <p className="toolhint">Choose a drawn annotation below to set its entry and exit times. The Arrow, Highlight and other buttons above create new annotations.</p>
+        <div className="annotationproperties"><label>Selected annotation<select value={selected||''} onChange={e=>{setSelected(e.target.value||null);setTool('select');}}><option value="">Choose an annotation to edit</option>{annotations.map((a,i)=><option key={a.id} value={a.id}>{i+1}. {a.type==='number'?`Step ${a.number}`:a.type}</option>)}</select></label>
           <label>Colour<input type="color" value={active?.color||color} onChange={e=>{setColor(e.target.value);if(active)commit({...active,color:e.target.value});}}/></label>
           {active?.type==='number'&&<label>Step number<input type="number" min="1" max="99" value={active.number} onChange={e=>commit({...active,number:clamp(Number(e.target.value)||1,1,99)})}/></label>}
           <button disabled={!active} onClick={()=>{onChange({annotations:annotations.filter(a=>a.id!==selected)});setSelected(null);}}>Delete annotation</button>
         </div>
-        {active&&<AnnotationTiming annotation={active} duration={scene.duration} elapsed={elapsed} onChange={commit}/>}
+        {active?<AnnotationTiming annotation={active} duration={scene.duration} elapsed={elapsed} onChange={commit}/>:<p className="toolhint">{annotations.length?'Select an annotation from the dropdown to see From the start, Enter at, Exit at and Until scene ends.':'Draw an annotation first. Its entry and exit controls will appear here.'}</p>}
         <p className="toolhint">Blur softens details. Use Cover to fully hide sensitive text in the video. Your original project image is retained.</p>
       </>:<>
         <label className="checkbox"><input type="checkbox" checked={camera.enabled} onChange={e=>onChange({camera:{...camera,enabled:e.target.checked}})}/>Enable zoom and pan</label>
