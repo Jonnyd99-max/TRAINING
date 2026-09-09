@@ -1,5 +1,12 @@
 # Build verification
 
+## Desktop launcher — 9 September 2026
+
+- The configured Windows batch launcher completed `--check --check-write`: Python imports, FFmpeg execution, export-folder write/delete probe and frontend rebuild all passed.
+- Created and read back the desktop shortcut to verify its target and working directory.
+- This is a launcher for the existing checkout, not a packaged distribution. Dependencies remain in their configured locations.
+- A direct user double-click and subsequent export outside the Codex process remain to be confirmed by the user.
+
 Verified on 8 September 2026 in a Windows development environment.
 
 ## Annotation timing and playback update — 9 September 2026

@@ -1,6 +1,10 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+if exist desktop.local.cmd (
+  call desktop.local.cmd
+  exit /b
+)
 where py >nul 2>&1
 if errorlevel 1 (
   echo Python was not found. Install Python 3.11 or newer from python.org, including the Python launcher.

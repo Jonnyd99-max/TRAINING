@@ -96,6 +96,12 @@ For a single-server production build, run `npm run build` in `frontend`, then re
 
 ## Create and edit a training
 
+### Desktop launcher
+
+On the configured Windows computer, double-click the **JD Training Studio** desktop shortcut. Keep its server window open while working; close that window to stop the app. The launcher starts the existing checkout under your Windows account, checks that the chosen export folder is writable, rebuilds the current interface, and opens the browser. It does not package the app or require repackaging after code edits. Restart to load backend changes; the rebuild refreshes frontend assets automatically.
+
+The machine-specific `desktop.local.cmd` supplies the existing Python, library and FFmpeg paths and is excluded from Git. `start.bat` uses it when present; otherwise the original setup workflow remains available. Keep the app folder and configured runtime/dependency folders in place. If another studio instance is running, the shortcut opens it; close that instance first when applying updates or switching from a Codex-started server. Missing dependencies require repair rather than automatic downloads.
+
 1. Click **Create Training** or **New Training**. Enter a title, optional subtitle, and choose whether to include an opening title scene.
 2. Click **Add scene**, choose a screenshot, and enter a scene title, narration, and optional short caption.
 3. Use the scene list to select, duplicate, delete, and move scenes up/down.

@@ -8,3 +8,4 @@ logs/
 test-results/
 models/
 settings.local.json
+desktop.local.cmd
