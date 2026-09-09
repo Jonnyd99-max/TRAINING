@@ -96,6 +96,12 @@ For a single-server production build, run `npm run build` in `frontend`, then re
 
 ## Create and edit a training
 
+### Organize and delete projects
+
+The dashboard includes search, a folder filter and sorting by name or last edited. Click **Move to folder** on a project, choose an existing folder or type a new name. Leave the name blank to return it to **Unfiled**. These are organizational folders inside the app; projects retain their existing storage locations. Folder names appear in the filter while they contain projects.
+
+**Delete project** permanently removes that project's JSON, uploaded screenshots, generated audio and internal video copies. Type the project title exactly to confirm. Completed videos copied to the separate **Training output** folder are preserved, as are other projects. The app blocks deletion during media generation, rejects stale confirmations, and refuses linked project folders or a chosen export directory located inside the project. Deletion cannot be undone in the app; keep a backup if you might need to edit the training again.
+
 ### Desktop launcher
 
 On the configured Windows computer, double-click the **JD Training Studio** desktop shortcut. Keep its server window open while working; close that window to stop the app. The launcher starts the existing checkout under your Windows account, checks that the chosen export folder is writable, rebuilds the current interface, and opens the browser. It does not package the app or require repackaging after code edits. Restart to load backend changes; the rebuild refreshes frontend assets automatically.

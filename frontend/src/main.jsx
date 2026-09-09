@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 import VisualWorkspace from './VisualWorkspace.jsx';
+import ProjectLibrary from './ProjectLibrary.jsx';
 
 async function api(path, options = {}) {
   const response = await fetch('/api' + path, { ...options, headers: options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' } });
@@ -127,8 +128,7 @@ function App() {
     {!project ? <main className="dashboard">
       <div className="eyebrow">YOUR TRAINING WORKSPACE</div><div className="pageheading"><div><h1>Good training starts here.</h1><p>Turn everyday screenshots into clear, narrated training videos.</p></div><button className="primary large" disabled={busy} onClick={() => setCreating(true)}>+ CREATE TRAINING</button></div>
       <div className="sectiontitle"><h2>Training projects <span>{projects.length}</span></h2><span>Saved on this computer</span></div>
-      <div className="cards">{projects.map(p => <article className="card" key={p.id}><div className="cardvisual">{p.scenes.find(s => s.image) ? <img alt="" src={`/api/projects/${p.id}/media/${p.scenes.find(s => s.image).image}`} /> : <span>JD<span>TRAINING STUDIO</span></span>}<b>{p.scenes.length} SCENES</b></div><div className="cardbody"><h3>{p.title}</h3><p>Edited {new Date(p.modified).toLocaleString()}</p><button disabled={busy} onClick={() => action(async () => { accept(await api(`/projects/${p.id}`)); setDirty(false); setSelected(0); setSaveState('Saved locally'); })}>Open training <span>↗</span></button></div></article>)}
-        <button className="newcard" disabled={busy} onClick={() => setCreating(true)}><span>+</span>Create a new training<small>A few scenes. A clearer process.</small></button></div>
+      <ProjectLibrary projects={projects} busy={busy} request={api} onProjects={setProjects} onNotice={setNotice} onCreate={()=>setCreating(true)} onOpen={p=>action(async()=>{accept(await api(`/projects/${p.id}`));setDirty(false);setSelected(0);setSaveState('Saved locally');})}/>
       <div className="workflow"><span>01 <b>Add screenshots</b></span><span>02 <b>Write your narration</b></span><span>03 <b>Export your training</b></span><p>No paid AI account required.</p></div>
     </main> : <main className="editor">
       <div className="editorheading"><div><div className="eyebrow">TRAINING EDITOR</div><input aria-label="Training title" className="projecttitle" disabled={locked || playing} maxLength={120} value={project.title} onChange={e => change({ ...project, title: e.target.value, video: null })}/><span className="savestatus">{saveState} · {project.scenes.length} scenes · {formatTime(total)}</span></div><div className="actions"><button disabled={locked} onClick={() => action(save)}>Save Project</button><button className="primary" disabled={locked || !project.scenes.length || !health?.ffmpeg} onClick={() => action(async () => { await save(); setJob(await api(`/projects/${project.id}/render`, { method: 'POST' })); })}>↗ GENERATE VIDEO</button></div></div>

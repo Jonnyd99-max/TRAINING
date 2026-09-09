@@ -1,0 +1,9 @@
+.librarycontrols{display:grid;grid-template-columns:2fr 1.3fr 1fr auto;gap:16px;align-items:end;padding:20px;background:white;border:1px solid #dce4e9;border-radius:10px}
+.librarycontrols input,.librarycontrols select{width:100%;margin-top:7px;padding:10px;border:1px solid #d7dfe6;border-radius:6px}
+.librarycount{color:#69788b;font-size:12px;margin:14px 0 22px}
+.folderbadge{display:inline-block;background:#e7f5ef;color:#21644d;border-radius:4px;padding:4px 8px;overflow-wrap:anywhere}
+.projectmanagement{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;border-top:1px solid #edf0f3;padding-top:12px}
+.cardbody .projectmanagement button{width:auto;font-size:12px;padding:8px 10px}
+.projectmanagement .danger{color:#a33535}
+@media(max-width:850px){.librarycontrols{grid-template-columns:1fr 1fr}.librarycontrols label:first-child{grid-column:1/-1}}
+@media(max-width:500px){.librarycontrols{grid-template-columns:1fr}}

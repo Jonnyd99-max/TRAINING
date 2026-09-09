@@ -1,5 +1,12 @@
 # Build verification
 
+## Project library — 9 September 2026
+
+- Isolated API tests verified folder persistence through edits/reopen, legacy unfiled defaults, deletion of local project assets, and preservation of external exports and other projects.
+- Tests reject wrong title confirmation, stale revisions, deletion during generation, unrelated browser origins, and deletion containing the configured output folder. A stale editor cannot recreate a deleted project; restart does not recreate it.
+- Browser checks verified creating/assigning a folder, filtering projects, search empty state, and the delete confirmation/cancel flow using isolated test projects. No real user projects were deleted.
+- Repeat with `python -m backend.test_project_library`.
+
 ## Desktop launcher — 9 September 2026
 
 - The configured Windows batch launcher completed `--check --check-write`: Python imports, FFmpeg execution, export-folder write/delete probe and frontend rebuild all passed.

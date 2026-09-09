@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import tempfile
 import threading
 from uuid import uuid4
@@ -77,6 +78,16 @@ class ProjectEdit(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     subtitle: str = Field(default='', max_length=160)
     scenes: list[Scene] = Field(max_length=100)
+    revision: int
+
+
+class ProjectOrganization(BaseModel):
+    folder: str = Field(default='', max_length=80)
+    revision: int
+
+
+class ProjectDeletion(BaseModel):
+    confirm_title: str = Field(max_length=120)
     revision: int
 
 def folder(pid):
@@ -155,7 +166,7 @@ async def local_requests(request: Request, call_next):
     return await call_next(request)
 app.add_middleware(CORSMiddleware, allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173',
                                                'http://localhost:8000', 'http://127.0.0.1:8000'],
-                   allow_methods=['GET', 'POST', 'PUT'], allow_headers=['Content-Type'])
+                   allow_methods=['GET', 'POST', 'PUT', 'DELETE'], allow_headers=['Content-Type'])
 
 @app.get('/api/health')
 def health():
@@ -180,7 +191,7 @@ def list_projects():
     for path in DATA.glob('*/project.json'):
         try:
             p = read(path.parent.name)
-            result.append({k: p[k] for k in ['id', 'title', 'modified', 'scenes']})
+            result.append({**{k: p[k] for k in ['id', 'title', 'modified', 'scenes', 'revision']}, 'folder': p.get('folder', '')})
         except HTTPException:
             log.warning('Unreadable project: %s', path)
     return sorted(result, key=lambda p: p['modified'], reverse=True)
@@ -194,6 +205,58 @@ def new_project(data: ProjectInput):
 def get_project(pid: str):
     with lock:
         return read(pid)
+
+
+@app.put('/api/projects/{pid}/organization')
+def organize_project(pid: str, data: ProjectOrganization):
+    with lock:
+        editable(pid)
+        project = read(pid)
+        if project['revision'] != data.revision:
+            raise HTTPException(409, 'This project changed. Refresh the dashboard and try again.')
+        name = ' '.join(data.folder.split())
+        # Folder names are metadata, never filesystem paths.
+        project.update(folder=name, revision=project['revision']+1)
+        write(project)
+        return project
+
+
+@app.delete('/api/projects/{pid}')
+def delete_project(pid: str, data: ProjectDeletion):
+    with lock:
+        editable(pid)
+        directory = folder(pid)
+        project = read(pid)
+        if project['revision'] != data.revision:
+            raise HTTPException(409, 'This project changed. Refresh the dashboard before deleting it.')
+        if data.confirm_title != project['title']:
+            raise HTTPException(400, 'Type the project title exactly to confirm deletion.')
+        if directory.resolve() != DATA/pid or directory.resolve().parent != DATA:
+            raise HTTPException(400, 'The project folder points outside project storage. Nothing was deleted.')
+        destination = exports.output_directory()
+        if destination and destination.resolve().is_relative_to(directory.resolve()):
+            raise HTTPException(400, 'Your chosen video export folder is inside this project. Move that export folder before deleting the project.')
+        # Refuse junctions/symlinks at every level so deletion cannot reach other folders.
+        for base, dirs, files in os.walk(directory, followlinks=False):
+            for candidate in [Path(base), *(Path(base)/name for name in dirs+files)]:
+                info = candidate.lstat()
+                if candidate.is_symlink() or getattr(info, 'st_file_attributes', 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                    raise HTTPException(400, 'This project contains linked files or folders. Nothing was deleted; remove the links before deleting it.')
+        try:
+            # Keep project.json until last so an interrupted deletion can be retried.
+            for child in directory.iterdir():
+                if child.name == 'project.json':
+                    continue
+                if child.is_dir():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+            (directory/'project.json').unlink()
+            directory.rmdir()
+        except OSError:
+            log.exception('Project deletion failed: %s', pid)
+            raise HTTPException(500, 'Deletion was incomplete; some local files may already be removed. Close files open in other programs, refresh the dashboard and retry. External exported videos were not touched.')
+        return {'deleted': pid, 'exported_videos_preserved': True}
 
 @app.put('/api/projects/{pid}')
 def save_project(pid: str, data: ProjectEdit):
