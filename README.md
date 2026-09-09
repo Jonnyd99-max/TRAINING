@@ -110,6 +110,8 @@ The three-scene **Scheduler Training Demo** is created on first startup. Its pla
 
 Select an image scene. The controls below its preview have two tabs:
 
+**Annotation timing:** select an annotation, then set **Enter at** and **Exit at** seconds. Choose **From the start** for time zero, and **Until scene ends** to keep it visible through the remainder. Use the playhead buttons to copy the current preview time, then **Apply annotation timing**. Applied changes autosave. Play or scrub to see timed visibility; **Show all for editing** reveals every annotation so hidden ones remain easy to select. Timing follows the scene, with an inclusive entry and exclusive exit, rounded to the video’s frame grid. Existing annotations remain visible throughout. Shortened scenes clip the display without deleting saved times. Timed blur/covers expose the original image outside their active interval.
+
 - **Annotations:** choose **Arrow**, **Highlight**, **Step**, **Blur**, or **Cover**. Drag on the screenshot to draw an arrow/rectangle; click to place a numbered step. Use **Move / resize** to select and drag a shape, or drag its square handles to resize. The annotation selector also selects overlapping shapes. Change the colour or step number, or use **Delete annotation** (Delete/Backspace also works while the canvas has focus). Up to 40 annotations can be added per scene.
 - **Zoom & pan:** enable the checkbox, choose **Start view** or **End view**, and adjust zoom (1×–3×), horizontal focus and vertical focus. Drag the zoomed screenshot to pan. **Play** moves smoothly between the two views over the scene duration; identical start/end views make a static close-up. **Reset framing** restores the full screenshot.
 
@@ -120,6 +122,8 @@ Blur softens details; use a solid **Cover** when text must be unreadable in the 
 ## Generate a video
 
 ### Narration subtitles
+
+New video exports use constant 30 fps, H.264 High Level 4.1, 1080p YUV 4:2:0 and AAC audio, with a capped peak video bitrate. Zoom/pan uses a larger working image to reduce pixel stepping; final encoding regularizes frame timing at scene joins. This can take longer to export. Regenerate older videos to use these improvements. Playback on a particular phone or laptop still depends on that device and player.
 
 **Timing controls:** after generating narration, open **Subtitle timing**. Drag the scene playhead to seek, or play and pause at a word. Use **Start here** / **End here**, or type start/end seconds for each phrase. **Go to start** positions playback at that phrase. Edit phrase text, add/remove phrases, then click **Apply subtitle timing** before previewing or exporting. Applied timings autosave with the scene. **Reset to estimated** restores automatic timing. Gaps are allowed; overlapping phrases are rejected. Changing narration, voice or speed resets custom timings. Shortening a scene clips its subtitle display without deleting the saved timings.
 

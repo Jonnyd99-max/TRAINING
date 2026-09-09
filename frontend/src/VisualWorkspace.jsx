@@ -1,11 +1,12 @@
 import Subtitles from './Subtitles.jsx';
+import AnnotationTiming from './AnnotationTiming.jsx';
 import React, {useEffect,useMemo,useRef,useState} from 'react';
-import {W,H,defaultCamera,clamp,cameraAt,prepareVisual,drawViewport,hit} from './visuals.js';
+import {W,H,FPS,visibleAt,defaultCamera,clamp,cameraAt,prepareVisual,drawViewport,hit} from './visuals.js';
 
 const TOOLS=[['select','Move / resize'],['arrow','Arrow'],['highlight','Highlight'],['number','Step'],['blur','Blur'],['cover','Cover']];
 const EMPTY=[];
 const uid=()=>crypto.randomUUID().replaceAll('-','');
-export default function VisualWorkspace({scene,src,locked,playing,elapsed,onChange,onError}) {
+export default function VisualWorkspace({scene,src,locked,playing,elapsed,seekVersion=0,onChange,onError}) {
   const [image,setImage]=useState(null),[mode,setMode]=useState('annotate'),[tool,setTool]=useState('select');
   const [selected,setSelected]=useState(null),[color,setColor]=useState('#facc15'),[endpoint,setEndpoint]=useState('end');
   const [draft,setDraft]=useState(null);
@@ -14,6 +15,7 @@ export default function VisualWorkspace({scene,src,locked,playing,elapsed,onChan
   const annotations=scene.annotations||EMPTY,camera=scene.camera||defaultCamera();
   const active=annotations.find(a=>a.id===selected);
   useEffect(()=>{if(playing)setPreviewing(true);},[playing]);
+  useEffect(()=>{if(seekVersion)setPreviewing(true);},[seekVersion]);
   useEffect(()=>{
     let disposed=false;const img=new Image();
     img.onload=()=>{if(!disposed)setImage(img);};
@@ -21,25 +23,27 @@ export default function VisualWorkspace({scene,src,locked,playing,elapsed,onChan
     return()=>{disposed=true;};
   },[src]);
   const shown=useMemo(()=>draft ? [...annotations.filter(a=>a.id!==draft.id),draft] : annotations,[annotations,draft]);
-  const base=useMemo(()=>image?prepareVisual(image,shown):null,[image,shown]);
-  const progress=clamp(Math.floor(elapsed*25)/Math.max(1,Math.ceil(scene.duration*25)-1));
-  const view=playing||(previewing&&elapsed>0)?cameraAt(camera,progress):mode==='camera'&&camera.enabled?camera[endpoint]:{zoom:1,x:.5,y:.5};
+  const isPreview=playing||previewing;
+  const visibility=shown.map(a=>!isPreview||visibleAt(a,elapsed)?'1':'0').join('');
+  const base=useMemo(()=>image?prepareVisual(image,shown.filter((_,i)=>visibility[i]==='1')):null,[image,shown,visibility]);
+  const progress=clamp(Math.floor(elapsed*FPS)/Math.max(1,Math.ceil(scene.duration*FPS)-1));
+  const view=isPreview?cameraAt(camera,progress):mode==='camera'&&camera.enabled?camera[endpoint]:{zoom:1,x:.5,y:.5};
   useEffect(()=>{
     if(!base||!canvas.current)return;
     const ctx=canvas.current.getContext('2d');drawViewport(ctx,base,view);
-    if(mode==='annotate'&&!playing&&selected){
+    if(mode==='annotate'&&!isPreview&&selected){
       const a=shown.find(a=>a.id===selected);if(!a)return;
       ctx.save();ctx.strokeStyle='#fff';ctx.fillStyle='#176f59';ctx.lineWidth=3;
       const points=a.type==='number'?[[a.x*W,a.y*H]]:[[a.x*W,a.y*H],[a.x2*W,a.y2*H]];
       for(const [x,y] of points){ctx.fillRect(x-9,y-9,18,18);ctx.strokeRect(x-9,y-9,18,18);}ctx.restore();
     }
-  },[base,view.zoom,view.x,view.y,mode,playing,selected,shown]);
+  },[base,view.zoom,view.x,view.y,mode,isPreview,selected,shown]);
   const point=e=>{const r=canvas.current.getBoundingClientRect();return{x:clamp((e.clientX-r.left)/r.width),y:clamp((e.clientY-r.top)/r.height)};};
   const commit=a=>onChange({annotations:annotations.some(v=>v.id===a.id)?annotations.map(v=>v.id===a.id?a:v):[...annotations,a]});
   const setView=values=>onChange({camera:{...camera,[endpoint]:{...camera[endpoint],...values}}});
   function down(e){
     if(locked||playing||!image||e.button!==0)return;
-    if(previewing&&elapsed>0){setPreviewing(false);return;}
+    if(previewing){setPreviewing(false);return;}
     setPreviewing(false);
     e.preventDefault();const p=point(e);canvas.current.setPointerCapture?.(e.pointerId);
     if(mode==='camera'){
@@ -95,12 +99,15 @@ export default function VisualWorkspace({scene,src,locked,playing,elapsed,onChan
       <div className="visualtabs"><button className={mode==='annotate'?'active':''} onClick={()=>setMode('annotate')}>Annotations</button><button className={mode==='camera'?'active':''} onClick={()=>setMode('camera')}>Zoom &amp; pan</button></div>
       {mode==='annotate'?<>
         <div className="toolrow">{TOOLS.map(([id,label])=><button key={id} className={tool===id?'active':''} disabled={id!=='select'&&annotations.length>=40} onClick={()=>{setTool(id);setSelected(null);}}>{label}</button>)}</div>
+        <div className="toolrow"><button className={isPreview?'active':''} onClick={()=>setPreviewing(true)}>Preview annotation timing</button><button className={!isPreview?'active':''} onClick={()=>setPreviewing(false)}>Show all for editing</button></div>
+        <p className="toolhint">{isPreview?'Showing annotations active at the playhead.':'Editing shows all annotations, including ones hidden at the current time.'} Play or scrub to check entry and exit times.</p>
         <p className="toolhint">Edit on the full screenshot. Drag to draw; click to place a step. Select a shape to move it or drag its square handles to resize.</p>
         <div className="annotationproperties"><label>Selected annotation<select value={selected||''} onChange={e=>{setSelected(e.target.value||null);setTool('select');}}><option value="">None selected</option>{annotations.map((a,i)=><option key={a.id} value={a.id}>{i+1}. {a.type==='number'?`Step ${a.number}`:a.type}</option>)}</select></label>
           <label>Colour<input type="color" value={active?.color||color} onChange={e=>{setColor(e.target.value);if(active)commit({...active,color:e.target.value});}}/></label>
           {active?.type==='number'&&<label>Step number<input type="number" min="1" max="99" value={active.number} onChange={e=>commit({...active,number:clamp(Number(e.target.value)||1,1,99)})}/></label>}
           <button disabled={!active} onClick={()=>{onChange({annotations:annotations.filter(a=>a.id!==selected)});setSelected(null);}}>Delete annotation</button>
         </div>
+        {active&&<AnnotationTiming annotation={active} duration={scene.duration} elapsed={elapsed} onChange={commit}/>}
         <p className="toolhint">Blur softens details. Use Cover to fully hide sensitive text in the video. Your original project image is retained.</p>
       </>:<>
         <label className="checkbox"><input type="checkbox" checked={camera.enabled} onChange={e=>onChange({camera:{...camera,enabled:e.target.checked}})}/>Enable zoom and pan</label>

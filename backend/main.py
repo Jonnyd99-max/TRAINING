@@ -310,7 +310,9 @@ def render_job(jobid, project):
         manifest.write_text('\n'.join(f"file '{p.name}'" for p in segments), encoding='utf-8')
         output = f'output/training-{jobid}.mp4'
         media.run([media.ffmpeg(), '-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', str(manifest),
-                   '-c', 'copy', '-movflags', '+faststart', str(directory / output)])
+                   '-vf', f'fps={media.visuals.FPS}', *media.video_encoding_args(),
+                   '-c:a', 'aac', '-ar', '48000', '-ac', '2', '-threads', '2',
+                   '-movflags', '+faststart', str(directory / output)])
         project['video'] = output
         job.update(message='Saving video...', progress=95)
         project['video_export'] = exports.publish(project, directory / output)

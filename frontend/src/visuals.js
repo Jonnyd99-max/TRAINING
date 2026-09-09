@@ -1,4 +1,6 @@
 export const W = 1920, H = 1080;
+export const FPS = 30;
+export const visibleAt = (a,t) => t >= (a.start??0) && (a.end==null || t<a.end);
 export const defaultCamera = () => ({ enabled: false, start: {zoom:1,x:.5,y:.5}, end: {zoom:1,x:.5,y:.5} });
 export const clamp = (v, min=0, max=1) => Math.max(min, Math.min(max, v));
 export function cameraAt(camera, progress) {

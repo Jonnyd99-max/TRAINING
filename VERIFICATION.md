@@ -2,6 +2,15 @@
 
 Verified on 8 September 2026 in a Windows development environment.
 
+## Annotation timing and playback update — 9 September 2026
+
+- Added entry/exit validation, legacy whole-scene defaults, and save/reopen tests for timed annotations.
+- Real MP4 frame comparisons verify arrows, highlights, steps, blur and covers appear/disappear at the chosen times, including an until-end cover. Multi-scene decoding verifies uniform 1/30-second video frame spacing across scene joins.
+- Browser checks on isolated data verified applying/saving a custom entry with until-end and scrubbing before/after entry. Editing mode displays all annotations; timing preview respects visibility.
+- Re-ran motion/caption and real offline subtitle export checks. A regression in the last subtitle image’s input frame rate was found and corrected.
+- New exports use 30 fps, bounded-rate H.264 High Level 4.1, AAC and fast-start MP4; camera cropping uses a 3840×2160 working image. Playback on the user’s other devices has not been verified.
+- Repeat with `python -m backend.test_annotation_timing`, `python -m backend.test_visuals` and `python -m backend.test_subtitles`.
+
 ## Narration subtitles
 
 - Custom timing update: real MP4 frame checks passed for leading, internal and trailing gaps, and both timed phrases. API tests passed for save/reopen persistence, overlap rejection, invalid intervals and resetting custom timings after narration changes. Frontend compiled successfully with esbuild.

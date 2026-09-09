@@ -141,15 +141,28 @@ def frame(scene, folder, include_caption=True):
 def render_scene(scene, folder, scratch, index):
     still = scratch / f'{index}.png'
     segment = scratch / f'{index}.mp4'
-    frame(scene, folder, include_caption=False).save(still)
     duration = scene['duration']
     fade = min(.3, duration/3)
-    args = [ffmpeg(), '-y', '-v', 'error', '-loop', '1', '-framerate', '25', '-i', str(still)]
+    args = [ffmpeg(), '-y', '-v', 'error']
+    intervals = visuals.annotation_intervals(scene)
+    if scene['kind'] == 'image' and len(intervals) > 1:
+        entries = []
+        for n, (start, end, annotations) in enumerate(intervals):
+            image_path = scratch / f'{index}-annotations-{n}.png'
+            frame({**scene, 'annotations': annotations}, folder, include_caption=False).save(image_path)
+            entries += [f"file '{image_path.name}'", f'option framerate {visuals.FPS}', f'duration {end-start:.9f}']
+        entries += [f"file '{image_path.name}'", f'option framerate {visuals.FPS}']
+        manifest = scratch / f'{index}-annotations.txt'
+        manifest.write_text('\n'.join(entries)+'\n', encoding='utf-8')
+        args += ['-f', 'concat', '-safe', '0', '-i', str(manifest)]
+    else:
+        frame({**scene, 'annotations': intervals[0][2]}, folder, include_caption=False).save(still)
+        args += ['-loop', '1', '-framerate', str(visuals.FPS), '-i', str(still)]
     if scene.get('audio') and scene.get('audio_key') == signature(scene):
         args += ['-i', str(folder / scene['audio'])]
     else:
         args += ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']
-    filters = [f for f in [visuals.motion_filter(scene)] if f]
+    filters = [f'fps={visuals.FPS}', 'setpts=PTS-STARTPTS'] + [f for f in [visuals.motion_filter(scene)] if f]
     fades = f'fade=t=in:st=0:d={fade},fade=t=out:st={duration-fade}:d={fade}'
     subtitle_cues = cues(scene)
     subtitle_mode = scene.get('subtitles_enabled') and scene.get('audio_duration')
@@ -162,20 +175,20 @@ def render_scene(scene, folder, scratch, index):
             position = 0
             for n, cue in enumerate(subtitle_cues):
                 if cue['start'] > position:
-                    entries += [f"file '{caption.name}'", 'option framerate 25', f"duration {cue['start']-position:.9f}"]
+                    entries += [f"file '{caption.name}'", f'option framerate {visuals.FPS}', f"duration {cue['start']-position:.9f}"]
                 layer = scratch / f'{index}-subtitle-{n}.png'
                 caption_layer({'caption': cue['text']}).save(layer)
-                entries += [f"file '{layer.name}'", 'option framerate 25', f"duration {cue['end']-cue['start']:.9f}"]
+                entries += [f"file '{layer.name}'", f'option framerate {visuals.FPS}', f"duration {cue['end']-cue['start']:.9f}"]
                 position = cue['end']
             caption_layer({'caption': ''}).save(caption)
             remaining = max(0, duration - position)
-            entries += [f"file '{caption.name}'", 'option framerate 25', f'duration {remaining + .08:.9f}', f"file '{caption.name}'"]
+            entries += [f"file '{caption.name}'", f'option framerate {visuals.FPS}', f'duration {remaining + .08:.9f}', f"file '{caption.name}'", f'option framerate {visuals.FPS}']
             manifest = scratch / f'{index}-subtitles.txt'
             manifest.write_text('\n'.join(entries)+'\n', encoding='utf-8')
             args += ['-f', 'concat', '-safe', '0', '-i', str(manifest)]
         else:
             caption_layer(scene).save(caption)
-            args += ['-loop', '1', '-framerate', '25', '-i', str(caption)]
+            args += ['-loop', '1', '-framerate', str(visuals.FPS), '-i', str(caption)]
         args += [
                  '-filter_complex_threads', '1', '-filter_complex',
                  f"[0:v]{','.join(filters) if filters else 'null'}[moving];[moving][2:v]overlay=shortest=1,{fades}[v]",
@@ -184,7 +197,13 @@ def render_scene(scene, folder, scratch, index):
         args += ['-vf', ','.join(filters + [fades]), '-map', '0:v', '-map', '1:a']
     args += ['-t', str(duration),
              '-af', f'apad,atrim=duration={duration},afade=t=out:st={duration-fade}:d={fade}',
-             '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p',
+             *video_encoding_args(),
              '-c:a', 'aac', '-ar', '48000', '-ac', '2', '-threads', '2', str(segment)]
     run(args)
     return segment
+
+
+def video_encoding_args():
+    return ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p',
+            '-profile:v', 'high', '-level:v', '4.1', '-maxrate', '8M', '-bufsize', '16M',
+            '-r', str(visuals.FPS), '-fps_mode', 'cfr', '-g', str(visuals.FPS*2)]

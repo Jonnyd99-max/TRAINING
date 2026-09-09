@@ -36,7 +36,7 @@ def main():
         p['scenes']=[scene]
         p=ok(client.put('/api/projects/'+p['id'],json=p))
         reopened=ok(client.get('/api/projects/'+p['id']))
-        assert reopened['scenes'][0]['annotations']==annotations
+        assert reopened['scenes'][0]['annotations']==scene['annotations']
         assert reopened['scenes'][0]['camera']==scene['camera']
         bad={**p,'scenes':[{**scene,'camera':{'enabled':True,'start':{'zoom':99},'end':{}}}]}
         assert client.put('/api/projects/'+p['id'],json=bad).status_code==422
@@ -59,7 +59,7 @@ def main():
         p=ok(client.get('/api/projects/'+p['id']))
         video=directory/p['video']
         media.run([media.ffmpeg(),'-v','error','-i',str(video),'-f','null','-'])
-        media.run([media.ffmpeg(),'-y','-v','error','-i',str(video),'-vf',"select='eq(n,10)+eq(n,50)'",'-vsync','0',str(TEST_ROOT/'motion-%02d.png')])
+        media.run([media.ffmpeg(),'-y','-v','error','-i',str(video),'-vf',"select='eq(n,10)+eq(n,60)'",'-vsync','0',str(TEST_ROOT/'motion-%02d.png')])
         first=Image.open(TEST_ROOT/'motion-01.png').convert('RGB')
         last=Image.open(TEST_ROOT/'motion-02.png').convert('RGB')
         assert first.size==last.size==(1920,1080)
