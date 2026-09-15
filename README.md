@@ -23,7 +23,7 @@ The application binds to loopback only. This is a single-user local app, not an 
 
 ## Fully offline narration
 
-After the one-time setup, disconnect from the internet and use **Generate Narration** or **GENERATE VIDEO** normally. The voice models and speech engine run on your CPU; no GPU, account or API key is needed. New projects/scenes default to offline speech.
+After the one-time setup, select an offline voice before disconnecting and use **Generate Narration** or **GENERATE VIDEO** normally. The offline voice models and speech engine run on your CPU; no GPU, account or API key is needed. New projects/scenes default to Ryan (British male), an online voice that requires internet to generate speech. **Use offline voices for this project** switches to the installed Piper default.
 
 Existing projects keep their previous voice selections. Open one and click **Use offline voices for this project** to switch every online scene to the offline default. This clears stale narration references; generate narration or export to create the new audio. The selector separates offline and online voices, and the editor shows when a project contains online scenes.
 

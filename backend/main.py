@@ -55,7 +55,7 @@ class Scene(BaseModel):
     audio_duration: float | None = None
     duration: float = Field(default=5, ge=1, le=3600)
     manual_duration: bool = False
-    voice: str = Field(default_factory=offline_tts.default_voice, min_length=1, max_length=200)
+    voice: str = Field(default='en-GB-RyanNeural', min_length=1, max_length=200)
     speed: int = Field(default=0, ge=-50, le=100)
     annotations: list[Annotation] = Field(default_factory=list, max_length=40)
     camera: CameraMotion = Field(default_factory=CameraMotion)
@@ -181,7 +181,7 @@ def health():
     offline = offline_tts.refresh()
     return dict(ffmpeg=ready, voices={**offline['voices'], **media.VOICES},
                 offline_voices=offline['voices'], online_voices=media.VOICES,
-                offline_ready=offline['ready'], default_voice=offline['default_voice'],
+                offline_ready=offline['ready'], default_voice='en-GB-RyanNeural', offline_default_voice=offline['default_voice'],
                 offline_message=offline['message'], offline_instructions=offline_tts.INSTRUCTIONS,
                 instructions='Install FFmpeg (including ffmpeg.exe), add its bin folder to PATH, then restart. On Windows: winget install Gyan.FFmpeg')
 
